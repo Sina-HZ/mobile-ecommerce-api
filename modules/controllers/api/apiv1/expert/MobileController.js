@@ -6,12 +6,7 @@ module.exports = new class MobileController {
     
     index(req, res){
         Mobile.find({}, (err, mobile)=>{
-            if(err){
-                return res.status(500).json({
-                    message : 'لیست محصولات در دسترس نیست ',
-                    success : false
-                })
-            }
+            if(err) throw err;
 
             if(mobile){
                 return res.json(mobile);
@@ -19,8 +14,29 @@ module.exports = new class MobileController {
         })
     }
 
-    store(req, res){
+    imageStore(req,res){
+        let newMobileImg = new MobileImg ({
+            image : {
+                url : 'http://localhost:3030' + req.file.path.replace(/\\/g,'/'),
+                contentType : 'image/jpg',
+                info : req.file
+            }, 
+           }).save(err =>{
+            if (err) throw err;
 
+            return res.json({
+                message: 'فایل با موفقیت آپلود شد',
+                data: {
+                        url :'http://localhost:3030' + req.file.path.replace(/\\/g,'/'),
+                        info : req.file
+                     },
+                success: true
+            })
+        })
+    }
+
+    store(req, res){
+       
         let newMobile = new Mobile ({
             name    : req.body.phone,
             price   : req.body.phonePrice,
@@ -35,12 +51,7 @@ module.exports = new class MobileController {
                 info : req.file
             },
         }).save((err,mobile) => {
-            if (err){
-                return res.status(400).json({
-                    message : 'مقادیر محصول مورد نظر مشکل دارند.لطفا مجدد امتحان نمایید',
-                    success : false
-                })
-            };
+            if (err) throw err;
             return res.json(mobile);
         })
     }
@@ -57,12 +68,7 @@ module.exports = new class MobileController {
                     url : req.body.phoneImg,
                 } 
             },( err =>{
-                if (err){
-                    return res.status(404).json({
-                        message : 'ID وارد شده صحیح نیست',
-                        success : false
-                    })
-                };
+                if (err) throw err;
 
                 return res.json({
                     _id     : req.params.id,
@@ -82,12 +88,7 @@ module.exports = new class MobileController {
 
     remove(req, res){
         Mobile.findByIdAndDelete(req.params.id, err =>{
-            if (err) {
-                return res.status(404).json({
-                    message : 'ID وارد شده صحیح نیست',
-                    success : false
-                })
-            };
+            if (err) throw err;
 
             return res.json({
                 message : 'ردیف مورد نظر با موفقیت حذف شد'

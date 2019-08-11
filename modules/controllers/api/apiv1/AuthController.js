@@ -1,95 +1,88 @@
 const User = require(`${config.models}/User`);
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 module.exports = new class AuthController {
     register(req, res){
-        req.checkBody('name' , 'وارد کردن فیلد نام الزامیست').notEmpty();
-        req.checkBody('family' , 'وارد کردن فیلد نام خانوادگی الزامیست').notEmpty();
-        req.checkBody('email' , 'وارد کردن فیلد ایمیل الزامیست').notEmpty();
-        req.checkBody('password' , 'کلمه عبور نمیتواند خالی باشد').notEmpty();
-        req.checkBody('email' , 'فرمت اییمل وارد شده صحیح نیست').isEmail();    
-
-        let errors = req.validationErrors()
-        if(errors){
-            res.status(422).json({
-                message : errors.map(error => {
-                    return {
-                    'field'   : error.param,
-                    'message' : error.msg
-                }
-                })
-            })
-        }
-
+ 
         let newUser = new User ({
             name : req.body.name,
             family : req.body.family,
             password : req.body.password,
             email : req.body.email,
-        }).save(err => {
+            role : 'customer'
+        }).save((err, user )=> {
             if(err){
                 if(err.code === 11000){
-                    return res.json({
-                        data : 'email is duplicated!',
+                    return res.status(406).json({
+                        data : 'ایمیل وارد شده تکراری است',
                         success : false
                     })
                 }else{
-                    throw new Error('ایجاد کاربر با خطا مواجه است');
+                    return res.status(400).json({
+                        message : 'ثبت نام ناموفق بود. لطفا مقادیر را مجدد بررسی فرمایید.',
+                        success : false
+                    })
                 }
                 
             }
+            jwt.sign({user_id: user._id},config.secret,(err, token)=>{
+                if(err) throw err;
 
-            return res.json({
-                message : 'کاربر با موفقیت ثبت شد',
-                success : true
+                return res.json({
+                    'message' : `کاربر گرامی ${user.name} ${user.family} از عضویت شما سپاسگذاریم`,
+                    'success' : true,
+                    'token' : token
+                });
             })
         })
 
     }
 
     login(req, res){
-        req.checkBody('email','وارد کردن فیلد ایمیل الزامی است');
-        req.checkBody('password','وارد کردن کلمه عبور الزامی است');
-
-        let errors = req.validationErrors()
-        if(errors){
-            res.status(422).json({
-                message : errors.map(error => {
-                    return {
-                    'field'   : error.param,
-                    'message' : error.msg
-                }
-                })
-            })
-        }
-
+    
         User.findOne({email : req.body.email},(err,user)=>{
-            if (err) throw err;
+            if (err){
+                return res.status(400).json({
+                    message : 'اطلاعات وارد شده صحیح نیست',
+                    success : false
+                })
+            };
 
             if (user == null)
-                res.status(422).json({
-                    message : 'ایمیل وارد شده صحیح نیست',
+                res.status(404).json({
+                    message : 'ایمیل / کلمه عبور صحیح نیست',
                     success : false 
                 })
 
                 bcrypt.compare(req.body.password, user.password, (err, status)=>{
                     if(! status){
-                        res.status(422).status({
-                            message : 'کلمه عبور صحیح نمی باشد',
-                            success : 'false'
+                        res.status(404).status({
+                            message : 'ایمیل / کلمه عبور صحیح نیست',
+                            success : false
                         })
                     }
+                    jwt.sign({user_id: user._id},config.secret,(err, token)=>{
+                        if(err) throw err;
 
-                    return res.json(user);
+                        return res.json({
+                            'message' : `کاربر گرامی ${user.name} ${user.family} خوش آمدید`,
+                            'success' : true,
+                            'token'   : token
+                        });
+                    })
+
+                    
                 })
         })
 
     }
 
     logout(req, res){
-        let token = req.user.token;
+        let token = req.body.token || req.query.token || req.headers['x-access-token'] ;
+        // console.log(req.user);
             if(token){
-                req.user.token = null;
+                token = null;
                 return res.json({
                     success: true,
                     message: 'user logout successfully'
