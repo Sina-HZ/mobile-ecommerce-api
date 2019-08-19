@@ -65,7 +65,9 @@ module.exports = new class MobileController {
                 camera  : req.body.phoneCamera,
                 battery : req.body.phoneBattery,
                 image   : {
-                    url : req.body.phoneImg,
+                    url : 'http://localhost:3030/' + req.file.path.replace(/\\/g,'/'),
+                    contentType : 'image/jpeg',
+                    info : req.file
                 } 
             },( err =>{
                 if (err) throw err;

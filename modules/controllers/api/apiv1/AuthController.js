@@ -15,7 +15,7 @@ module.exports = new class AuthController {
             if(err){
                 if(err.code === 11000){
                     return res.status(406).json({
-                        data : 'ایمیل وارد شده تکراری است',
+                        message : 'ایمیل وارد شده تکراری است',
                         success : false
                     })
                 }else{
@@ -42,38 +42,40 @@ module.exports = new class AuthController {
     login(req, res){
     
         User.findOne({email : req.body.email},(err,user)=>{
-            if (err){
-                return res.status(400).json({
+            if (err) {
+                res.json({
                     message : 'اطلاعات وارد شده صحیح نیست',
                     success : false
-                })
+                });
+                return;
             };
 
-            if (user == null)
-                res.status(404).json({
+            if (user === null)
+                return res.json({
                     message : 'ایمیل / کلمه عبور صحیح نیست',
                     success : false 
                 })
 
-                bcrypt.compare(req.body.password, user.password, (err, status)=>{
-                    if(! status){
-                        res.status(404).status({
-                            message : 'ایمیل / کلمه عبور صحیح نیست',
-                            success : false
-                        })
-                    }
-                    jwt.sign({user_id: user._id},config.secret,(err, token)=>{
-                        if(err) throw err;
-
-                        return res.json({
-                            'message' : `کاربر گرامی ${user.name} ${user.family} خوش آمدید`,
-                            'success' : true,
-                            'token'   : token
-                        });
+                if(user){
+                    bcrypt.compare(req.body.password, user.password, (err, status)=>{
+                        if(! status){
+                            res.status(404).status({
+                                message : 'ایمیل / کلمه عبور صحیح نیست',
+                                success : false
+                            })
+                        }
+                        jwt.sign({user_id: user._id},config.secret,(err, token)=>{
+                            if(err) throw err;
+    
+                            return res.json({
+                                'message' : `کاربر گرامی ${user.name} ${user.family} خوش آمدید`,
+                                'success' : true,
+                                'token'   : token
+                            });
+                        }) 
                     })
+                }
 
-                    
-                })
         })
 
     }
